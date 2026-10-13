@@ -99,3 +99,30 @@ def describe(name, arr):
     a = arr
     rng = "" if sp.issparse(a) else f" range=[{np.min(a):.3g}, {np.max(a):.3g}]"
     print(f"  {name}: shape={a.shape} dtype={a.dtype}{rng}")
+
+#Download helper incase 403 rejections hit
+def download_file(urls, dest):
+    import urllib.request
+    if os.path.exists(dest) and os.path.getsize(dest) > 0:
+        return dest
+    os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
+    if isinstance(urls, str):
+        urls = [urls]
+    last = None
+    for url in urls:
+        try:
+            print(f"  downloading {url}")
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) "
+                                                                     "AppleWebKit/537.36 Chrome/124.0 Safari/537.36"})
+            with urllib.request.urlopen(req, timeout=60) as r, open(dest, "wb") as f:
+                f.write(r.read())
+            return dest
+        except Exception as e:  # try the next mirror
+            last = e
+            print(f"    failed: {e}")
+            if os.path.exists(dest):
+                os.remove(dest)
+    raise RuntimeError(f"Could not download {os.path.basename(dest)} ({last}).\n"
+                       f"Download it manually in your browser and upload it to '{dest}' "
+                       f"(Colab: Files panel -> upload), then re-run.")
+

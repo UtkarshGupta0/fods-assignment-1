@@ -9,13 +9,18 @@ from scipy.ndimage import uniform_filter
 from sklearn.decomposition import PCA
 
 from common import (SEED, cached_features, describe, log_result, make_split,
-                    plot_embedding_2d, save_fig)
+                    plot_embedding_2d, save_fig, download_file)
 
 DATA = "data"
 IP_URLS = {
-    "Indian_pines_corrected.mat": "https://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat",
-    "Indian_pines_gt.mat": "https://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat",
+    "Indian_pines_corrected.mat": [
+        "https://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat",
+        "http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat"],
+    "Indian_pines_gt.mat": [
+        "https://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat",
+        "http://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat"],
 }
+
 IP_CLASSES = ["Alfalfa", "Corn-notill", "Corn-mintill", "Corn", "Grass-pasture", "Grass-trees",
               "Grass-pasture-mowed", "Hay-windrowed", "Oats", "Soybean-notill", "Soybean-mintill",
               "Soybean-clean", "Wheat", "Woods", "Bldg-Grass-Tree-Drives", "Stone-Steel-Towers"]
@@ -24,7 +29,7 @@ IP_CLASSES = ["Alfalfa", "Corn-notill", "Corn-mintill", "Corn", "Grass-pasture",
 # PART A -- HYPERSPECTRAL
 def load_indian_pines():
     for fname, url in IP_URLS.items():
-        path = os.path.join(DATA, fname)
+        download_file( urls,os.path.join(DATA, fname))
         if not os.path.exists(path):
             print(f"  downloading {fname} ...")
             urllib.request.urlretrieve(url, path)
