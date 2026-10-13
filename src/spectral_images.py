@@ -12,14 +12,20 @@ from common import (SEED, cached_features, describe, log_result, make_split,
                     plot_embedding_2d, save_fig, download_file)
 
 DATA = "data"
+GH = "https://raw.githubusercontent.com"
 IP_URLS = {
     "Indian_pines_corrected.mat": [
-        "https://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat",
-        "http://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat"],
+        f"{GH}/gokriznastic/HybridSN/master/data/Indian_pines_corrected.mat",
+        f"{GH}/eternal-vanguard/SpectralNET/master/data/Indian_pines_corrected.mat",
+        f"{GH}/KonstantinosF/Classification-of-Hyperspectral-Image/master/Data/Indian_pines_corrected.mat",
+        "https://www.ehu.eus/ccwintco/uploads/6/67/Indian_pines_corrected.mat"],
     "Indian_pines_gt.mat": [
-        "https://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat",
-        "http://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat"],
+        f"{GH}/gokriznastic/HybridSN/master/data/Indian_pines_gt.mat",
+        f"{GH}/eternal-vanguard/SpectralNET/master/data/Indian_pines_gt.mat",
+        f"{GH}/KonstantinosF/Classification-of-Hyperspectral-Image/master/Data/Indian_pines_gt.mat",
+        "https://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat"],
 }
+
 
 IP_CLASSES = ["Alfalfa", "Corn-notill", "Corn-mintill", "Corn", "Grass-pasture", "Grass-trees",
               "Grass-pasture-mowed", "Hay-windrowed", "Oats", "Soybean-notill", "Soybean-mintill",
