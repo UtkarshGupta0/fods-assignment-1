@@ -6,7 +6,7 @@ import pandas as pd
 import scipy.sparse as sp
 import matplotlib
 
-matplotlib.use("Agg")  # no display needed (works on Colab and headless servers)
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA, TruncatedSVD
 from sklearn.linear_model import LogisticRegression
@@ -29,6 +29,22 @@ def make_split(y, groups=None, test_size=0.3, seed=SEED):
         return train_test_split(idx, test_size=test_size, stratify=y, random_state=seed)
     gss = GroupShuffleSplit(n_splits=1, test_size=test_size, random_state=seed)
     return next(gss.split(idx, y, groups))
+
+def cached_features(name, extractor_fn):
+    path = os.path.join(CACHE_DIR, f"{name}.npz")
+    if os.path.exists(path):
+        z = np.load(path, allow_pickle=True)
+        X = z["X"].item() if z["sparse"] else z["X"]
+        print(f"  [cache] loaded {name}  shape={X.shape}")
+        return X, float(z["seconds"])
+    t0 = time.perf_counter()
+    X = extractor_fn()
+    seconds = time.perf_counter() - t0
+    is_sparse = sp.issparse(X)
+    np.savez_compressed(path, X=np.array(X, dtype=object) if is_sparse else X,
+                        seconds=seconds, sparse=is_sparse)
+    return X, seconds
+
 
 #simple multinomial logistic regression to check the accuracy of different methods
 def linear_probe(X, y, split):
