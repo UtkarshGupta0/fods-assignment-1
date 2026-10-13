@@ -36,9 +36,6 @@ IP_CLASSES = ["Alfalfa", "Corn-notill", "Corn-mintill", "Corn", "Grass-pasture",
 def load_indian_pines():
     for fname, urls in IP_URLS.items():
         download_file( urls ,os.path.join(DATA, fname))
-        if not os.path.exists(path):
-            print(f"  downloading {fname} ...")
-            urllib.request.urlretrieve(url, path)
     cube = sio.loadmat(os.path.join(DATA, "Indian_pines_corrected.mat"))["indian_pines_corrected"]
     gt = sio.loadmat(os.path.join(DATA, "Indian_pines_gt.mat"))["indian_pines_gt"]
     return cube.astype(np.float32), gt.astype(np.int64)
