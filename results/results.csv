@@ -1,0 +1,4 @@
+modality,method,feature_dim,n_samples,extract_seconds,accuracy,macro_f1,notes
+rgb_image,Colour histogram,48,2000,0.61,0.2167,0.2112,hand-crafted
+rgb_image,HOG,1764,2000,3.75,0.3933,0.394,hand-crafted
+rgb_image,ResNet50 embedding,2048,2000,16.24,0.8617,0.8614,pretrained CNN
