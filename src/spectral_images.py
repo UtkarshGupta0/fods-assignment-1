@@ -28,8 +28,8 @@ IP_CLASSES = ["Alfalfa", "Corn-notill", "Corn-mintill", "Corn", "Grass-pasture",
 
 # PART A -- HYPERSPECTRAL
 def load_indian_pines():
-    for fname, url in IP_URLS.items():
-        download_file( urls,os.path.join(DATA, fname))
+    for fname, urls in IP_URLS.items():
+        download_file( urls ,os.path.join(DATA, fname))
         if not os.path.exists(path):
             print(f"  downloading {fname} ...")
             urllib.request.urlretrieve(url, path)
