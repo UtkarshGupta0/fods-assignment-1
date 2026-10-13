@@ -1,0 +1,8 @@
+# Large / regenerable files stay out of git
+data/*
+!data/.gitkeep
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.env
+*.zip
