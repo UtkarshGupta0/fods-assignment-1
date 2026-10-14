@@ -7,3 +7,5 @@ matplotlib
 sklearn
 skimage
 tensorflow
+imagecodecs
+triffile
