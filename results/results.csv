@@ -3,6 +3,9 @@ rgb_image,Colour histogram,48,2000,0.61,0.2167,0.2112,hand-crafted
 rgb_image,HOG,1764,2000,3.75,0.3933,0.394,hand-crafted
 rgb_image,ResNet50 embedding,2048,2000,16.24,0.8617,0.8614,pretrained CNN
 hyperspectral,Raw spectrum (200 bands),200,10249,0.0,0.8468,0.8672,no extraction
-hyperspectral,PCA-20,20,10249,0.05,0.6998,0.7017,linear projection
-hyperspectral,PCA-20 + 5x5 neighbourhood,40,10249,0.07,0.8364,0.8773,spatial-spectral
-hyperspectral,1D-CNN embedding (64),64,10249,146.67,0.9252,0.9301,learned; trained on train split
+hyperspectral,PCA-20,20,10249,0.5,0.6998,0.7017,linear projection
+hyperspectral,PCA-20 + 5x5 neighbourhood,40,10249,0.68,0.8364,0.8773,spatial-spectral
+hyperspectral,1D-CNN embedding (64),64,10249,151.48,0.9252,0.9301,learned; trained on train split
+multispectral,RGB-only stats (3 bands),36,3000,1.49,0.6789,0.673,"same descriptor, 3 bands"
+multispectral,13-band stats + indices,162,3000,8.83,0.8611,0.8598,adds NIR/red-edge/SWIR + NDVI/NDWI/NDBI
+multispectral,ResNet50 on RGB bands,2048,3000,852.1,0.9478,0.9477,"pretrained CNN, ignores non-visible bands"
