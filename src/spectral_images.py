@@ -1,3 +1,4 @@
+
 import os
 import sys
 
@@ -130,20 +131,36 @@ def run_hyperspectral():
 S2 = ["B01", "B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B09", "B10", "B11", "B12"]
 IDX = {b: i for i, b in enumerate(S2)}
 RGB_IDX = [IDX["B04"], IDX["B03"], IDX["B02"]]  # red, green, blue
+EUROSAT_URLS = ["https://zenodo.org/records/7711096/files/EuroSAT_MS.zip?download=1",
+                "https://zenodo.org/record/7711096/files/EuroSAT_MS.zip?download=1"]
 
 
-def load_eurosat_ms(shard=9):
+
+def load_eurosat_ms(per_class=300, seed=SEED):
+    import io
+    import zipfile
+    from collections import defaultdict
     try:
-        import tensorflow_datasets as tfds
-        import importlib_resources  # noqa: F401  (needed by tfds on newer Python; pip install importlib_resources)
-    except ImportError as e:
-        raise SystemExit(f"Missing package ({e}). Run: pip install -q tensorflow-datasets importlib_resources")
-    ds, info = tfds.load("eurosat/all", split="train", with_info=True)
-    ds = ds.shard(num_shards=shard, index=0)
+        import tifffile
+    except ImportError:
+        raise SystemExit("Missing package. Run: pip install -q tifffile imagecodecs")
+    zpath = download_file(EUROSAT_URLS, os.path.join(DATA, "EuroSAT_MS.zip"))
+    rng = np.random.default_rng(seed)
     X, y = [], []
-    for ex in tfds.as_numpy(ds):
-        X.append(ex["sentinel2"]); y.append(ex["label"])
-    return np.stack(X), np.array(y), info.features["label"].names
+    with zipfile.ZipFile(zpath) as z:
+        by_class = defaultdict(list)
+        for n in z.namelist():
+            if n.lower().endswith(".tif") and "__MACOSX" not in n:
+                by_class[os.path.basename(os.path.dirname(n))].append(n)
+        names = sorted(by_class)
+        for ci, cname in enumerate(names):
+            files = sorted(by_class[cname])
+            for i in rng.choice(len(files), min(per_class, len(files)), replace=False):
+                img = tifffile.imread(io.BytesIO(z.read(files[i])))
+                if img.shape[0] == 13:            # some readers return (bands, H, W)
+                    img = np.moveaxis(img, 0, -1)
+                X.append(img.astype(np.uint16)); y.append(ci)
+    return np.stack(X), np.array(y), names
 
 
 def band_descriptor(X, bands, lo, hi, nbins=10):
@@ -156,7 +173,8 @@ def band_descriptor(X, bands, lo, hi, nbins=10):
 
 
 def spectral_indices(X):
-    f = lambda a, b: (X[..., IDX[a]].astype(np.float32) - X[..., IDX[b]]) / (X[..., IDX[a]].astype(np.float32) + X[..., IDX[b]] + 1e-6)
+    f = lambda a, b: (X[..., IDX[a]].astype(np.float32) - X[..., IDX[b]]) / (
+                X[..., IDX[a]].astype(np.float32) + X[..., IDX[b]] + 1e-6)
     out = []
     for idx in (f("B08", "B04"), f("B03", "B08"), f("B11", "B08")):
         flat = idx.reshape(len(X), -1)
@@ -174,7 +192,7 @@ def run_multispectral():
 
     X_rgb, t1 = cached_features("ms_rgb_stats", lambda: band_descriptor(X, RGB_IDX, lo, hi))
     X_all, t2 = cached_features("ms_all_stats", lambda: np.hstack([band_descriptor(X, range(13), lo, hi),
-                                                                  spectral_indices(X)]))
+                                                                   spectral_indices(X)]))
     rows = [("RGB-only stats (3 bands)", X_rgb, t1, "same descriptor, 3 bands"),
             ("13-band stats + indices", X_all, t2, "adds NIR/red-edge/SWIR + NDVI/NDWI/NDBI")]
 
@@ -184,6 +202,7 @@ def run_multispectral():
             rgb = X[..., RGB_IDX].astype(np.float32)
             rgb = np.clip(rgb / np.percentile(rgb, 99) * 255, 0, 255).astype(np.uint8)
             return cnn_embeddings(rgb)
+
         X_cnn, t3 = cached_features("ms_resnet_rgb", f_cnn)
         rows.append(("ResNet50 on RGB bands", X_cnn, t3, "pretrained CNN, ignores non-visible bands"))
 

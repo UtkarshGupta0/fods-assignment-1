@@ -115,9 +115,9 @@ def download_file(urls, dest):
             req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) "
                                                                      "AppleWebKit/537.36 Chrome/124.0 Safari/537.36"})
             with urllib.request.urlopen(req, timeout=60) as r, open(dest, "wb") as f:
-                f.write(r.read())
+                shutil.copyfileobj(r, f, length=1 << 20)
             return dest
-        except Exception as e:  # try the next mirror
+        except Exception as e:
             last = e
             print(f"    failed: {e}")
             if os.path.exists(dest):
@@ -125,4 +125,5 @@ def download_file(urls, dest):
     raise RuntimeError(f"Could not download {os.path.basename(dest)} ({last}).\n"
                        f"Download it manually in your browser and upload it to '{dest}' "
                        f"(Colab: Files panel -> upload), then re-run.")
+
 
