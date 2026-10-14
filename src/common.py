@@ -23,10 +23,8 @@ CACHE_DIR = os.path.join("data", "cache")
 for _d in (RESULTS_DIR, FIG_DIR, CACHE_DIR):
     os.makedirs(_d, exist_ok=True)
 
-
-
-# Splits
 def make_split(y, groups=None, test_size=0.3, seed=SEED):
+
     idx = np.arange(len(y))
     if groups is None:
         return train_test_split(idx, test_size=test_size, stratify=y, random_state=seed)
@@ -50,9 +48,9 @@ def cached_features(name, extractor_fn):
                         seconds=seconds, sparse=is_sparse)
     return X, seconds
 
+
 def linear_probe(X, y, split):
     tr, te = split
-    # Sparse TF-IDF matrices must not be mean-centred (would destroy sparsity).
     scaler = StandardScaler(with_mean=not sp.issparse(X))
     clf = make_pipeline(scaler, LogisticRegression(max_iter=3000))
     clf.fit(X[tr], y[tr])
@@ -78,7 +76,6 @@ def log_result(modality, method, X, y, split, extract_seconds, notes=""):
 
 
 def plot_embedding_2d(X, y, class_names, title, fname):
-
     if sp.issparse(X):
         Z = TruncatedSVD(2, random_state=SEED).fit_transform(X)
     else:
@@ -105,30 +102,47 @@ def describe(name, arr):
     rng = "" if sp.issparse(a) else f" range=[{np.min(a):.3g}, {np.max(a):.3g}]"
     print(f"  {name}: shape={a.shape} dtype={a.dtype}{rng}")
 
-def download_file(urls, dest):
+
+def _valid_download(path, min_bytes, validate_zip):
+    import zipfile
+    if not os.path.exists(path) or os.path.getsize(path) < max(min_bytes, 1):
+        return False
+    return (not validate_zip) or zipfile.is_zipfile(path)
+
+
+def download_file(urls, dest, min_bytes=1, validate_zip=False):
     import shutil
     import urllib.request
-    if os.path.exists(dest) and os.path.getsize(dest) > 0:
+    if _valid_download(dest, min_bytes, validate_zip):
         return dest
+    if os.path.exists(dest):
+        print(f"  existing {os.path.basename(dest)} is incomplete/corrupt -> deleting and re-downloading")
+        os.remove(dest)
     os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
     if isinstance(urls, str):
         urls = [urls]
+    agents = ["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36",
+              "curl/8.5.0", "Python-urllib/3.12"]
     last = None
     for url in urls:
-        try:
-            print(f"  downloading {url}")
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) "
-                                                                     "AppleWebKit/537.36 Chrome/124.0 Safari/537.36"})
-            with urllib.request.urlopen(req, timeout=60) as r, open(dest, "wb") as f:
-                shutil.copyfileobj(r, f, length=1 << 20)
-                return dest
-        except Exception as e:
-            last = e
-            print(f"    failed: {e}")
+        for ua in agents:
+            try:
+                print(f"  downloading {url}  (UA: {ua.split('/')[0]})")
+                req = urllib.request.Request(url, headers={"User-Agent": ua})
+                with urllib.request.urlopen(req, timeout=60) as r, open(dest, "wb") as f:
+                    shutil.copyfileobj(r, f, length=1 << 20)
+                if _valid_download(dest, min_bytes, validate_zip):
+                    return dest
+                size = os.path.getsize(dest)
+                with open(dest, "rb") as f:
+                    head = f.read(150)
+                last = f"got {size:,} bytes that are not a valid file; starts with {head[:100]!r}"
+                print(f"    invalid download: {last}")
+            except Exception as e:  
+                last = e
+                print(f"    failed: {e}")
             if os.path.exists(dest):
                 os.remove(dest)
     raise RuntimeError(f"Could not download {os.path.basename(dest)} ({last}).\n"
                        f"Download it manually in your browser and upload it to '{dest}' "
                        f"(Colab: Files panel -> upload), then re-run.")
-
-
