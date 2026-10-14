@@ -2,3 +2,7 @@ modality,method,feature_dim,n_samples,extract_seconds,accuracy,macro_f1,notes
 rgb_image,Colour histogram,48,2000,0.61,0.2167,0.2112,hand-crafted
 rgb_image,HOG,1764,2000,3.75,0.3933,0.394,hand-crafted
 rgb_image,ResNet50 embedding,2048,2000,16.24,0.8617,0.8614,pretrained CNN
+hyperspectral,Raw spectrum (200 bands),200,10249,0.0,0.8468,0.8672,no extraction
+hyperspectral,PCA-20,20,10249,0.05,0.6998,0.7017,linear projection
+hyperspectral,PCA-20 + 5x5 neighbourhood,40,10249,0.07,0.8364,0.8773,spatial-spectral
+hyperspectral,1D-CNN embedding (64),64,10249,146.67,0.9252,0.9301,learned; trained on train split
