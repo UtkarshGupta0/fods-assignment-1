@@ -1,6 +1,5 @@
 import os
 import sys
-import urllib.request
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,8 +7,8 @@ import scipy.io as sio
 from scipy.ndimage import uniform_filter
 from sklearn.decomposition import PCA
 
-from common import (SEED, cached_features, describe, log_result, make_split,
-                    plot_embedding_2d, save_fig, download_file)
+from common import (SEED, cached_features, describe, download_file, log_result,
+                    make_split, plot_embedding_2d, save_fig)
 
 DATA = "data"
 GH = "https://raw.githubusercontent.com"
@@ -25,23 +24,25 @@ IP_URLS = {
         f"{GH}/KonstantinosF/Classification-of-Hyperspectral-Image/master/Data/Indian_pines_gt.mat",
         "https://www.ehu.eus/ccwintco/uploads/c/c4/Indian_pines_gt.mat"],
 }
-
-
 IP_CLASSES = ["Alfalfa", "Corn-notill", "Corn-mintill", "Corn", "Grass-pasture", "Grass-trees",
               "Grass-pasture-mowed", "Hay-windrowed", "Oats", "Soybean-notill", "Soybean-mintill",
               "Soybean-clean", "Wheat", "Woods", "Bldg-Grass-Tree-Drives", "Stone-Steel-Towers"]
 
 
+
 # PART A -- HYPERSPECTRAL
+
 def load_indian_pines():
+
     for fname, urls in IP_URLS.items():
-        download_file( urls ,os.path.join(DATA, fname))
+        download_file(urls, os.path.join(DATA, fname))
     cube = sio.loadmat(os.path.join(DATA, "Indian_pines_corrected.mat"))["indian_pines_corrected"]
     gt = sio.loadmat(os.path.join(DATA, "Indian_pines_gt.mat"))["indian_pines_gt"]
     return cube.astype(np.float32), gt.astype(np.int64)
 
 
 def normalized_difference(cube, band_a, band_b):
+
     a, b = cube[..., band_a], cube[..., band_b]
     return (a - b) / (a + b + 1e-8)
 
@@ -56,7 +57,8 @@ def spectral_cnn_embeddings(X_spec, y, split, epochs=40):
     h = tf.keras.layers.Conv1D(32, 7, activation="relu")(inp)
     h = tf.keras.layers.MaxPool1D(2)(h)
     h = tf.keras.layers.Conv1D(64, 5, activation="relu")(h)
-    h = tf.keras.layers.GlobalAveragePooling1D()(h)
+    h = tf.keras.layers.Flatten()(h)
+    h = tf.keras.layers.Dropout(0.3)(h)
     emb = tf.keras.layers.Dense(64, activation="relu", name="embedding")(h)
     out = tf.keras.layers.Dense(int(y.max()) + 1, activation="softmax")(emb)
     model = tf.keras.Model(inp, out)
@@ -69,7 +71,7 @@ def spectral_cnn_embeddings(X_spec, y, split, epochs=40):
 def run_hyperspectral():
     print("== HYPERSPECTRAL: Indian Pines ==")
     cube, gt = load_indian_pines()
-    describe("cube (H,W,bands)", cube)
+    describe("cube (H,W,bands)", cube)  # a 3-D tensor; bands = the 3rd axis
     H, W, B = cube.shape
 
     mask = gt > 0
@@ -81,28 +83,21 @@ def run_hyperspectral():
 
     fig, ax = plt.subplots(1, 3, figsize=(13, 4))
     rgb = cube[..., [29, 19, 9]]
-    ax[0].imshow((rgb - rgb.min()) / (rgb.max() - rgb.min()));
-    ax[0].set_title("false-colour composite")
-    ax[1].imshow(gt, cmap="nipy_spectral");
-    ax[1].set_title("ground truth (16 classes)")
-    im = ax[2].imshow(normalized_difference(cube, 41, 26), cmap="RdYlGn");
-    ax[2].set_title("NDVI-like index (approx. bands)")
+    ax[0].imshow((rgb - rgb.min()) / (rgb.max() - rgb.min())); ax[0].set_title("false-colour composite")
+    ax[1].imshow(gt, cmap="nipy_spectral"); ax[1].set_title("ground truth (16 classes)")
+    im = ax[2].imshow(normalized_difference(cube, 41, 26), cmap="RdYlGn"); ax[2].set_title("NDVI-like index (approx. bands)")
     plt.colorbar(im, ax=ax[2], fraction=0.046)
     for a in ax: a.axis("off")
-    plt.tight_layout();
-    save_fig("hsi_overview.png")
+    plt.tight_layout(); save_fig("hsi_overview.png")
 
     plt.figure(figsize=(7, 4))
-    for c in [1, 5, 10, 13]:
+    for c in [1, 5, 10, 13]:  # corn-notill, grass-trees, soybean-mintill, woods
         plt.plot(X_spec[y == c].mean(0), label=IP_CLASSES[c])
-    plt.xlabel("band index (~400-2500 nm)");
-    plt.ylabel("reflectance (scaled)")
-    plt.title("Spectral signatures: mean spectrum per class");
-    plt.legend(fontsize=7)
-    plt.tight_layout();
-    save_fig("hsi_spectral_signatures.png")
+    plt.xlabel("band index (~400-2500 nm)"); plt.ylabel("reflectance (scaled)")
+    plt.title("Spectral signatures: mean spectrum per class"); plt.legend(fontsize=7)
+    plt.tight_layout(); save_fig("hsi_spectral_signatures.png")
 
-
+    # --- feature sets -------------------------------------------------------
     tr = split[0]
 
     def f_pca():
@@ -111,10 +106,10 @@ def run_hyperspectral():
         return pca.transform(X_spec).astype(np.float32)
 
     def f_spatial():
-        pca5 = PCA(5, random_state=SEED).fit(X_spec[tr])
-        pcs = pca5.transform(cube.reshape(-1, B)).reshape(H, W, 5)
+        pca = PCA(20, random_state=SEED).fit(X_spec[tr])
+        pcs = pca.transform(cube.reshape(-1, B)).reshape(H, W, 20)
         neigh = uniform_filter(pcs, size=(5, 5, 1))[mask]
-        return np.hstack([pca5.transform(X_spec), neigh]).astype(np.float32)
+        return np.hstack([pca.transform(X_spec), neigh]).astype(np.float32)
 
     X_pca, t_pca = cached_features("hsi_pca20", f_pca)
     X_sp, t_sp = cached_features("hsi_spatial", f_spatial)
@@ -123,28 +118,31 @@ def run_hyperspectral():
     print("\nLinear-probe benchmark:")
     for name, X, t, note in [("Raw spectrum (200 bands)", X_spec, 0.0, "no extraction"),
                              ("PCA-20", X_pca, t_pca, "linear projection"),
-                             ("PCA-5 + 5x5 neighbourhood", X_sp, t_sp, "spatial-spectral"),
+                             ("PCA-20 + 5x5 neighbourhood", X_sp, t_sp, "spatial-spectral"),
                              ("1D-CNN embedding (64)", X_cnn, t_cnn, "learned; trained on train split")]:
         log_result("hyperspectral", name, X, y, split, t, note)
     plot_embedding_2d(X_pca, y, IP_CLASSES, "Indian Pines: PCA-20 features", "hsi_pca_embedding.png")
     plot_embedding_2d(X_cnn, y, IP_CLASSES, "Indian Pines: 1D-CNN features", "hsi_cnn_embedding.png")
 
 
-# PART B -- MULTISPECTRAL (EuroSAT, Sentinel-2, 13 bands)
 
+# PART B -- MULTISPECTRAL (EuroSAT, Sentinel-2, 13 bands)
 S2 = ["B01", "B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B09", "B10", "B11", "B12"]
 IDX = {b: i for i, b in enumerate(S2)}
 RGB_IDX = [IDX["B04"], IDX["B03"], IDX["B02"]]  # red, green, blue
 
 
 def load_eurosat_ms(shard=9):
-    import tensorflow_datasets as tfds
+    try:
+        import tensorflow_datasets as tfds
+        import importlib_resources  # noqa: F401  (needed by tfds on newer Python; pip install importlib_resources)
+    except ImportError as e:
+        raise SystemExit(f"Missing package ({e}). Run: pip install -q tensorflow-datasets importlib_resources")
     ds, info = tfds.load("eurosat/all", split="train", with_info=True)
     ds = ds.shard(num_shards=shard, index=0)
     X, y = [], []
     for ex in tfds.as_numpy(ds):
-        X.append(ex["sentinel2"]);
-        y.append(ex["label"])
+        X.append(ex["sentinel2"]); y.append(ex["label"])
     return np.stack(X), np.array(y), info.features["label"].names
 
 
@@ -158,8 +156,7 @@ def band_descriptor(X, bands, lo, hi, nbins=10):
 
 
 def spectral_indices(X):
-    f = lambda a, b: (X[..., IDX[a]].astype(np.float32) - X[..., IDX[b]]) / (
-                X[..., IDX[a]].astype(np.float32) + X[..., IDX[b]] + 1e-6)
+    f = lambda a, b: (X[..., IDX[a]].astype(np.float32) - X[..., IDX[b]]) / (X[..., IDX[a]].astype(np.float32) + X[..., IDX[b]] + 1e-6)
     out = []
     for idx in (f("B08", "B04"), f("B03", "B08"), f("B11", "B08")):
         flat = idx.reshape(len(X), -1)
@@ -177,18 +174,16 @@ def run_multispectral():
 
     X_rgb, t1 = cached_features("ms_rgb_stats", lambda: band_descriptor(X, RGB_IDX, lo, hi))
     X_all, t2 = cached_features("ms_all_stats", lambda: np.hstack([band_descriptor(X, range(13), lo, hi),
-                                                                   spectral_indices(X)]))
+                                                                  spectral_indices(X)]))
     rows = [("RGB-only stats (3 bands)", X_rgb, t1, "same descriptor, 3 bands"),
             ("13-band stats + indices", X_all, t2, "adds NIR/red-edge/SWIR + NDVI/NDWI/NDBI")]
 
-    #'modern' comparison: pretrained CNN on RGB only
     if "--no-cnn" not in sys.argv:
         from rgb_images import cnn_embeddings
         def f_cnn():
             rgb = X[..., RGB_IDX].astype(np.float32)
             rgb = np.clip(rgb / np.percentile(rgb, 99) * 255, 0, 255).astype(np.uint8)
             return cnn_embeddings(rgb)
-
         X_cnn, t3 = cached_features("ms_resnet_rgb", f_cnn)
         rows.append(("ResNet50 on RGB bands", X_cnn, t3, "pretrained CNN, ignores non-visible bands"))
 
@@ -202,4 +197,3 @@ if __name__ == "__main__":
     run_hyperspectral()
     if "--eurosat" in sys.argv:
         run_multispectral()
-
