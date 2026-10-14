@@ -131,8 +131,8 @@ def run_hyperspectral():
 S2 = ["B01", "B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B09", "B10", "B11", "B12"]
 IDX = {b: i for i, b in enumerate(S2)}
 RGB_IDX = [IDX["B04"], IDX["B03"], IDX["B02"]]  # red, green, blue
-EUROSAT_URLS = ["https://zenodo.org/records/7711096/files/EuroSAT_MS.zip?download=1",
-                "https://zenodo.org/record/7711096/files/EuroSAT_MS.zip?download=1"]
+EUROSAT_URLS = ["https://zenodo.org/records/7711097/files/EuroSAT_MS.zip?download=1",
+                "https://zenodo.org/record/7711097/files/EuroSAT_MS.zip?download=1"]
 
 
 
