@@ -9,3 +9,4 @@ skimage
 tensorflow
 imagecodecs
 triffile
+shutil

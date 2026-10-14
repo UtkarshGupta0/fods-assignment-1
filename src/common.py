@@ -1,4 +1,5 @@
 import os
+import shutil
 import time
 
 import numpy as np
@@ -23,12 +24,16 @@ for _d in (RESULTS_DIR, FIG_DIR, CACHE_DIR):
     os.makedirs(_d, exist_ok=True)
 
 
+
+# Splits
 def make_split(y, groups=None, test_size=0.3, seed=SEED):
     idx = np.arange(len(y))
     if groups is None:
         return train_test_split(idx, test_size=test_size, stratify=y, random_state=seed)
     gss = GroupShuffleSplit(n_splits=1, test_size=test_size, random_state=seed)
     return next(gss.split(idx, y, groups))
+
+
 
 def cached_features(name, extractor_fn):
     path = os.path.join(CACHE_DIR, f"{name}.npz")
@@ -45,10 +50,9 @@ def cached_features(name, extractor_fn):
                         seconds=seconds, sparse=is_sparse)
     return X, seconds
 
-
-#simple multinomial logistic regression to check the accuracy of different methods
 def linear_probe(X, y, split):
     tr, te = split
+    # Sparse TF-IDF matrices must not be mean-centred (would destroy sparsity).
     scaler = StandardScaler(with_mean=not sp.issparse(X))
     clf = make_pipeline(scaler, LogisticRegression(max_iter=3000))
     clf.fit(X[tr], y[tr])
@@ -72,8 +76,9 @@ def log_result(modality, method, X, y, split, extract_seconds, notes=""):
           f"time={extract_seconds:7.1f}s  acc={acc:.3f}  macroF1={f1:.3f}")
     return row
 
-#seperating features into 2D using PCA and truncated SVD and colour by class, visually seperate clusters signify features that organise data well
+
 def plot_embedding_2d(X, y, class_names, title, fname):
+
     if sp.issparse(X):
         Z = TruncatedSVD(2, random_state=SEED).fit_transform(X)
     else:
@@ -94,14 +99,14 @@ def save_fig(fname):
     plt.close()
     print(f"  [figure] {path}")
 
-# printing the nature of the feature"
+
 def describe(name, arr):
     a = arr
     rng = "" if sp.issparse(a) else f" range=[{np.min(a):.3g}, {np.max(a):.3g}]"
     print(f"  {name}: shape={a.shape} dtype={a.dtype}{rng}")
 
-#Download helper incase 403 rejections hit
 def download_file(urls, dest):
+    import shutil
     import urllib.request
     if os.path.exists(dest) and os.path.getsize(dest) > 0:
         return dest
@@ -116,7 +121,7 @@ def download_file(urls, dest):
                                                                      "AppleWebKit/537.36 Chrome/124.0 Safari/537.36"})
             with urllib.request.urlopen(req, timeout=60) as r, open(dest, "wb") as f:
                 shutil.copyfileobj(r, f, length=1 << 20)
-            return dest
+                return dest
         except Exception as e:
             last = e
             print(f"    failed: {e}")
