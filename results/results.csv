@@ -20,3 +20,14 @@ audio,MFCC + delta stats,160,1440,20.12,0.4396,0.4309,classical
 audio,MFCC + prosody,166,1440,38.81,0.4333,0.42,classical + pitch/energy
 audio,wav2vec2 layer 6,768,1440,960.98,0.6854,0.6788,self-supervised transformer
 audio,wav2vec2 layer 12,768,1440,960.98,0.5292,0.5309,last layer
+thermal_vs_rgb,RGB colour histogram,48,400,0.4,0.9667,0.9667,RGB
+thermal_vs_rgb,RGB HOG,1764,400,0.99,0.7417,0.7415,RGB
+thermal_vs_rgb,RGB ResNet50,2048,400,15.14,0.8917,0.8915,RGB
+thermal_vs_rgb,Thermal intensity histogram,32,400,0.18,0.725,0.7245,thermal
+thermal_vs_rgb,Thermal hot-blob stats,6,400,0.4,0.7583,0.7575,thermal
+thermal_vs_rgb,Thermal HOG,1764,400,1.05,0.7,0.6979,thermal
+thermal_vs_rgb,Thermal ResNet50,2048,400,3.04,0.8167,0.8166,thermal
+video_rgb,Frame-difference stats,6,150,0.32,0.3111,0.2661,6-d motion energy
+video_rgb,Optical-flow HOF,33,150,9.02,0.3556,0.2889,motion only
+video_rgb,ResNet50 frame mean,2048,150,20.06,0.9111,0.9166,appearance only
+video_rgb,ResNet50 + HOF,2081,150,29.08,0.9111,0.9144,appearance + motion
