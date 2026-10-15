@@ -1,6 +1,6 @@
 # Multi-Modal Feature Extraction: From Pixels, Spectra and Waveforms to Tensors
 
-*CS F320 Foundations of Data Science, Assignment 1 | Utk | BITS Pilani, Pilani Campus | 15 October 2026*
+*CS F320 Foundations of Data Science, Assignment 1 | 15 October 2026*
 
 ---
 
@@ -370,59 +370,53 @@ The first run of `spectral_images.py` stopped at `urllib.error.HTTPError: HTTP E
 
 The fix was to find other copies. Several public GitHub repositories carry the same two files. I checked that four of them serve byte-identical data (the corrected cube is 5,953,527 bytes, the ground truth 1,125 bytes), then loaded one and confirmed the shapes: a (145, 145, 200) cube, a (145, 145) label map, 16 classes, 10,249 labelled pixels, and the variable names `indian_pines_corrected` and `indian_pines_gt`. The loader now tries the GitHub mirrors first and the original host last, and the error message explains how to upload the files by hand.
 
-### 4.2 `NameError: name 'shutil' is not defined`
-
-After I switched the downloader to stream large files in chunks with `shutil.copyfileobj`, the Indian Pines download failed on every mirror with `failed: name 'shutil' is not defined`, followed by the old 403 from the last mirror and a final `RuntimeError`. The line numbers in the traceback did not match the file I thought I was running. My copy of `common.py` in the Colab repository was a mixture of two versions: the streaming call was there but the import was not.
-
-I fixed it twice over: the function now imports `shutil` itself, and I replaced the whole file instead of patching lines by hand. There was a second lesson. The downloader's `except Exception` blocks were meant to catch network errors and move on to the next mirror, but they also swallowed a plain programming error and presented it as a network failure. Reading each printed `failed:` line, rather than only the last traceback, is what exposed it.
-
-### 4.3 The Colab runtime disconnected and wiped my results
+### 4.2 The Colab runtime disconnected and wiped my results
 
 I had a complete set of hyperspectral results, the runtime disconnected, and everything in memory and on the temporary disk went with it. Rerunning cost me the 150-second CNN training again. Three changes came out of that. `cached_features` now stores every feature matrix and its extraction time under `data/cache/`. The other safeguard is copying that cache to Google Drive between sessions. And I started committing `results/` to GitHub after each script finished. Since then a disconnect costs a minute, not an hour.
 
-### 4.4 The 1D-CNN lost to the raw spectrum
+### 4.3 The 1D-CNN lost to the raw spectrum
 
 The first learned model for Indian Pines scored 0.650 accuracy (macro-F1 0.566), far below the raw 200-band spectrum at 0.847. A learned feature underperforming the raw input is a red flag, not an acceptable result. The training code had no obvious bug, so I suspected the architecture. The network ended its convolutional stack with `GlobalAveragePooling1D`, which averages each filter's response over the whole wavelength axis. That makes the representation indifferent to *where* in the spectrum a pattern appears, and for spectra position is the information.
 
 To check the diagnosis I trained both variants on the same split with real data. Global average pooling gave 0.647; replacing it with `Flatten` plus `Dropout(0.3)` gave 0.927. In my own runs on Colab the fixed network scored 0.932 once and 0.925 another time. The difference is ordinary run-to-run variation in TensorFlow training, which a fixed seed does not fully remove.
 
-### 4.5 An unfair comparison, and the PCA surprise
+### 4.4 An unfair comparison, and the PCA surprise
 
 My first spatial-spectral feature set used the neighbourhood mean of only 5 principal components, so it had 10 dimensions and was compared against the 20-component PCA baseline. It scored lower, and I could not tell whether spatial context hurt or the 5-versus-20 difference did. I rebuilt it as PCA-20 plus the neighbourhood mean of the same 20 components (40 dimensions), so that spatial context is the only change. The result then made sense: 0.700 to 0.836.
 
 The bigger conceptual hurdle was why PCA-20 (98.9% of the variance retained) scored 14 points below the raw spectrum. I had half-assumed that keeping nearly all the variance means keeping nearly all the information. It does not: variance measures spread, not class separation. The fine differences between corn and soybean classes sit in low-variance directions that PCA throws away first. I also had to remember that the spatial gain is optimistic, because with a random pixel split many test pixels have training neighbours.
 
-### 4.6 EuroSAT: a missing module, then a dead host
+### 4.5 EuroSAT: a missing module, then a dead host
 
 Running `--eurosat` stopped inside TensorFlow Datasets with `ModuleNotFoundError: No module named 'importlib_resources'`, a dependency problem on Colab's Python 3.13. Installing `importlib_resources` got past that and exposed the real obstacle: the download from the dataset's original host (`madm.dfki.de`) printed `ConnectTimeoutError ... Retrying` over and over until I killed it. It had also left a half-built dataset folder behind (the log warned that the folder had no `dataset_info.json`), which needs deleting before a retry.
 
 I dropped TensorFlow Datasets for this dataset altogether and rewrote `load_eurosat_ms` to read the official archive from Zenodo directly with `zipfile` and `tifffile`, sampling files straight out of the zip. That also removed a dependency.
 
-### 4.7 Wrong Zenodo link
+### 4.6 Wrong Zenodo link
 
 The first Zenodo URL I put into the loader pointed at a record number that does not host the multispectral archive, and following it in a browser gave "page not found". Searching for the dataset's actual record turned up the right one (record 7711097, `EuroSAT_MS.zip`, about 2.1 GB), and I corrected the loader. Lesson: verify a URL by opening it before building code around it.
 
-### 4.8 `BadZipFile: File is not a zip file`
+### 4.7 `BadZipFile: File is not a zip file`
 
 With the right URL, the next run died at `zipfile.BadZipFile: File is not a zip file`. It failed immediately after "downloading", far too fast for a 2 GB transfer, so the saved file cannot have been the dataset. Most likely the server had returned a small error or rate-limit page, which my downloader had happily saved under the `.zip` name. Worse, the next run would see that file existing and skip downloading entirely.
 
 I rewrote `download_file` to validate its output: a minimum size (1.5 GB for EuroSAT, 150 MB for RAVDESS), `zipfile.is_zipfile` for archives, deletion of any invalid file, several User-Agent strings per URL, Zenodo's API download path as an extra mirror, and an error message that prints the first bytes of whatever was received. After that, the EuroSAT download and the full run completed.
 
-### 4.9 Slow extractors
+### 4.8 Slow extractors
 
 wav2vec2 on 1,440 clips took about 961 seconds, and ResNet50 on EuroSAT took 852 seconds, which is out of proportion to the 16 seconds the same network needed for 2,000 CIFAR images. The second figure points to a session without GPU acceleration. I did not rerun it. The practical consequence is that the timing columns are only meaningful within one modality's table.
 
-### 4.10 Thermal data: a hard search and a confounded experiment
+### 4.9 Thermal data: a hard search and a confounded experiment
 
 FLIR's own ADAS dataset, as I understood it, needs a registration step and is large, and I wanted something loadable in a few lines. Hugging Face has a paired FLIR dataset (`newguyme/flir_paired`) with a manageable test split, so the thermal script uses that, with column auto-detection because I could not see the schema in advance. I could not find a thermal-video dataset I could verify and download in time, so the thermal-video code was never run on real data.
 
 The thermal experiment itself taught me something about experimental design. The frames have no class labels, so I invented a dark/bright label from RGB brightness and predicted that thermal features would stay near chance. They scored 0.70 to 0.82. Looking at the figure of the pairs showed black borders on the dark RGB frames, which means the label partly encodes image framing, and the RGB colour histogram's 0.967 is leakage. The plot title "no dark/bright structure" was hard-coded before I had any results, and I had to treat it as a wrong prediction rather than a finding.
 
-### 4.11 No TPU
+### 4.10 No TPU
 
 `tensors_tpu.py` tried to initialise a TPU, raised a `ValueError`, and fell back to the default strategy on one Tesla T4 GPU. The fallback is exactly what I wrote it to do, but it means the `TPUStrategy` path is written and reasoned about, not run on a TPU. I report that plainly in Section 5.
 
-### 4.12 Sentence-BERT lost on sentiment
+### 4.11 Sentence-BERT lost on sentiment
 
 I had assumed a transformer embedding would win the sentiment task. It came last (0.757), behind both TF-IDF and averaged GloVe. I treated that as a finding rather than a bug, since the code is identical to the one that works well on newsgroups, and spent time working out why. Section 2.8 gives the likely reasons (a similarity-trained model, truncation at 256 tokens), none of which I tested directly.
 
