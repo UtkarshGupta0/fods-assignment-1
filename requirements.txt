@@ -10,3 +10,4 @@ tensorflow
 imagecodecs
 triffile
 shutil
+huggingface_hub
