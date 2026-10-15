@@ -9,3 +9,9 @@ hyperspectral,1D-CNN embedding (64),64,10249,151.48,0.9252,0.9301,learned; train
 multispectral,RGB-only stats (3 bands),36,3000,1.49,0.6789,0.673,"same descriptor, 3 bands"
 multispectral,13-band stats + indices,162,3000,8.83,0.8611,0.8598,adds NIR/red-edge/SWIR + NDVI/NDWI/NDBI
 multispectral,ResNet50 on RGB bands,2048,3000,852.1,0.9478,0.9477,"pretrained CNN, ignores non-visible bands"
+text_20newsgroups,TF-IDF,9796,2000,0.61,0.89,0.8905,"sparse, count-based"
+text_20newsgroups,GloVe average,100,2000,77.83,0.8517,0.8517,"static dense, 100-d"
+text_20newsgroups,Sentence-BERT,384,2000,216.54,0.88,0.8804,"contextual dense, 384-d"
+text_imdb,TF-IDF,10109,2000,1.08,0.7983,0.7983,"sparse, count-based"
+text_imdb,GloVe average,100,2000,71.17,0.825,0.825,"static dense, 100-d"
+text_imdb,Sentence-BERT,384,2000,251.42,0.7567,0.7567,"contextual dense, 384-d"
