@@ -15,3 +15,8 @@ text_20newsgroups,Sentence-BERT,384,2000,216.54,0.88,0.8804,"contextual dense, 3
 text_imdb,TF-IDF,10109,2000,1.08,0.7983,0.7983,"sparse, count-based"
 text_imdb,GloVe average,100,2000,71.17,0.825,0.825,"static dense, 100-d"
 text_imdb,Sentence-BERT,384,2000,251.42,0.7567,0.7567,"contextual dense, 384-d"
+audio,Log-mel stats,128,1440,15.58,0.3563,0.3452,128-d
+audio,MFCC + delta stats,160,1440,20.12,0.4396,0.4309,classical
+audio,MFCC + prosody,166,1440,38.81,0.4333,0.42,classical + pitch/energy
+audio,wav2vec2 layer 6,768,1440,960.98,0.6854,0.6788,self-supervised transformer
+audio,wav2vec2 layer 12,768,1440,960.98,0.5292,0.5309,last layer
